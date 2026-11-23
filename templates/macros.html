@@ -1,0 +1,46 @@
+{% set BG = {"ok": "bg-emerald-500", "warn": "bg-amber-400", "crit": "bg-rose-500", "none": "bg-zinc-600"} %}
+{% set TX = {"ok": "text-emerald-400", "warn": "text-amber-300", "crit": "text-rose-400", "none": "text-zinc-500"} %}
+{% set STROKE = {"cyan": "#22d3ee", "violet": "#a78bfa", "amber": "#fbbf24", "emerald": "#34d399", "rose": "#fb7185", "sky": "#38bdf8"} %}
+
+{% macro bar(pct, lvl=None, h="h-1.5") -%}
+  {%- set l = lvl or level(pct) -%}
+  <div class="{{ h }} w-full overflow-hidden rounded-full bg-zinc-800">
+    <div class="{{ h }} {{ BG[l] }} rounded-full transition-all duration-500" style="width: {{ [pct or 0, 100]|min }}%"></div>
+  </div>
+{%- endmacro %}
+
+{% macro head(title, sub="") -%}
+  <div class="mb-3 flex items-baseline justify-between gap-2">
+    <h2 class="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">{{ title }}</h2>
+    {% if sub %}<span class="truncate font-mono text-[11px] text-zinc-500">{{ sub }}</span>{% endif %}
+  </div>
+{%- endmacro %}
+
+{% macro graph(label, value, values, color, vmax=None) -%}
+  {%- set p = spark(values, vmax) -%}
+  <div class="rounded-lg border border-zinc-800/80 bg-zinc-950/60 p-2.5">
+    <div class="flex items-baseline justify-between">
+      <span class="text-[10px] uppercase tracking-wider text-zinc-500">{{ label }}</span>
+      <span class="num font-mono text-sm text-zinc-100">{{ value }}</span>
+    </div>
+    <svg viewBox="0 0 100 32" preserveAspectRatio="none" class="mt-1.5 h-10 w-full">
+      {% if p.line %}
+      <polygon points="{{ p.area }}" fill="{{ STROKE[color] }}" fill-opacity="0.12"/>
+      <polyline points="{{ p.line }}" fill="none" stroke="{{ STROKE[color] }}" stroke-width="1.2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+      {% endif %}
+    </svg>
+  </div>
+{%- endmacro %}
+
+{% macro icon(a, size="h-10 w-10 text-xl") -%}
+  {%- set ic = a.icon or "" -%}
+  <div class="{{ size }} flex shrink-0 items-center justify-center rounded-lg bg-zinc-800/80 ring-1 ring-inset ring-white/5">
+    {%- if ic.startswith("http") or ic.startswith("/") -%}
+      <img src="{{ ic }}" alt="" class="h-3/5 w-3/5 object-contain" loading="lazy">
+    {%- elif ic -%}
+      <span>{{ ic }}</span>
+    {%- else -%}
+      <span class="font-mono text-sm font-bold text-cyan-300">{{ a.name[:2]|upper }}</span>
+    {%- endif -%}
+  </div>
+{%- endmacro %}

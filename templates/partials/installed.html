@@ -1,0 +1,29 @@
+{% set SRC = {"apt": "text-amber-300", "snap": "text-violet-300", "flatpak": "text-sky-300", "local": "text-emerald-300", "opt": "text-cyan-300"} %}
+<section id="installed" class="card">
+  <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+    <h2 class="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Instalados por você <span class="ml-1 font-mono normal-case tracking-normal text-zinc-600">{{ items|length }}</span></h2>
+    <input type="search" placeholder="filtrar…" oninput="filterList(this, 'inst-list')"
+           class="w-40 rounded-md border border-zinc-800 bg-zinc-950 px-2 py-1 font-mono text-xs text-zinc-200 placeholder:text-zinc-600 focus:border-cyan-500/50 focus:outline-none">
+  </div>
+  <ul id="inst-list" class="max-h-80 divide-y divide-zinc-800/60 overflow-y-auto pr-1">
+    {% for i in items %}
+    <li class="group flex items-center gap-3 py-1.5" data-q="{{ (i.name ~ ' ' ~ i.summary ~ ' ' ~ i.source)|lower }}">
+      <span class="w-12 shrink-0 font-mono text-[10px] uppercase {{ SRC.get(i.source, 'text-zinc-400') }}">{{ i.source }}</span>
+      <div class="min-w-0 flex-1">
+        <div class="truncate font-mono text-xs text-zinc-100">{{ i.name }} <span class="text-zinc-600">{{ i.version }}</span></div>
+        {% if i.summary %}<div class="truncate text-[11px] text-zinc-500">{{ i.summary }}</div>{% endif %}
+      </div>
+      <span class="shrink-0 font-mono text-[10px] text-zinc-600">{{ i.date or "" }}</span>
+      <button title="Ocultar desta lista (ex.: veio com o sistema)" class="shrink-0 rounded px-1 text-zinc-600 opacity-0 hover:bg-zinc-800 hover:text-zinc-300 group-hover:opacity-100"
+              hx-post="/installed/hide" hx-vals='{"key": {{ i.key|tojson }}}' hx-target="closest li" hx-swap="outerHTML">✕</button>
+    </li>
+    {% else %}
+    <li class="py-3 text-sm text-zinc-500">Nada encontrado.</li>
+    {% endfor %}
+  </ul>
+  <p class="mt-2 text-[11px] text-zinc-600">
+    apt: pacotes marcados como manuais que não vieram com o sistema + o que aparece no histórico do apt.
+    Passe o mouse e clique em ✕ para ocultar algo que veio de fábrica.
+    {% if hidden %}<button class="text-zinc-400 underline hover:text-zinc-200" hx-post="/installed/unhide-all" hx-target="#installed" hx-swap="outerHTML">mostrar {{ hidden }} ocultos</button>{% endif %}
+  </p>
+</section>

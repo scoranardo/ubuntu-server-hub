@@ -1,0 +1,9 @@
+# dados e configuração locais — nunca vão para o git
+.env
+data/
+*.local
+# python / node
+__pycache__/
+*.pyc
+.venv/
+node_modules/

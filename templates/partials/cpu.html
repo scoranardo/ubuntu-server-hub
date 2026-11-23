@@ -1,0 +1,44 @@
+{% import "macros.html" as m %}
+{% set cpu = s.cpu %}
+{% set pkg = cpu.pkg_temp %}
+<section id="cpu-card" {% if oob %}hx-swap-oob="true"{% endif %} class="card">
+  {{ m.head("Processador", sys.cpu_model ~ " · " ~ sys.cores_phys ~ "C/" ~ sys.cores_log ~ "T" ~ (" · " ~ sys.governor if sys.governor else "")) }}
+
+  <div class="grid grid-cols-2 gap-2 @2xl:grid-cols-4">
+    {{ m.graph("Uso", "%.0f%%"|format(cpu.total), h.cpu, "cyan", 100) }}
+    {{ m.graph("Frequência", ("%.2f GHz"|format(cpu.freq_avg / 1000)) if cpu.freq_avg else "—", h.freq, "violet", cpu.freq_max) }}
+    {{ m.graph("Temperatura", ("%.0f °C"|format(pkg.current)) if pkg else "—", h.temp, "amber" if not pkg or pkg.current < 75 else "rose", 100) }}
+    {% if cpu.power is not none %}
+      {{ m.graph("Potência", "%.1f W"|format(cpu.power), h.power, "emerald") }}
+    {% else %}
+      <div class="rounded-lg border border-zinc-800/80 bg-zinc-950/60 p-2.5">
+        <span class="text-[10px] uppercase tracking-wider text-zinc-500">Carga média</span>
+        <div class="num mt-1 font-mono text-sm text-zinc-100">{{ "%.2f  %.2f  %.2f"|format(*cpu.load) }}</div>
+        <div class="mt-1 text-[10px] text-zinc-600">1 · 5 · 15 min</div>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="mt-4 space-y-2.5">
+    {% for core in cpu.cores %}
+    <div class="grid grid-cols-[3.2rem_1fr_3rem_4.2rem_3.4rem] items-center gap-3 font-mono text-xs">
+      <span class="text-zinc-500">CPU{{ core.idx }}</span>
+      {{ m.bar(core.pct, h="h-2") }}
+      <span class="num text-right text-zinc-200">{{ "%.0f"|format(core.pct) }}%</span>
+      <span class="num text-right text-violet-300">{{ ("%.2f GHz"|format(core.freq / 1000)) if core.freq else "—" }}</span>
+      <span class="num text-right {{ m.TX[level(core.temp, 70, 85)] }}">{{ ("%.0f°C"|format(core.temp)) if core.temp is not none else "—" }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% set t = cpu.times %}
+  <div class="mt-4 flex flex-wrap gap-x-5 gap-y-1 border-t border-zinc-800 pt-3 font-mono text-[11px] text-zinc-500">
+    <span>usr <b class="num font-normal text-emerald-300">{{ "%.1f"|format(t.user) }}%</b></span>
+    <span>sys <b class="num font-normal text-rose-300">{{ "%.1f"|format(t.system) }}%</b></span>
+    <span>nice <b class="num font-normal text-sky-300">{{ "%.1f"|format(t.nice) }}%</b></span>
+    <span>iowait <b class="num font-normal text-amber-300">{{ "%.1f"|format(t.get("iowait", 0)) }}%</b></span>
+    <span>idle <b class="num font-normal text-zinc-300">{{ "%.1f"|format(t.idle) }}%</b></span>
+    {% if cpu.power is not none %}<span>load <b class="num font-normal text-zinc-300">{{ "%.2f %.2f %.2f"|format(*cpu.load) }}</b></span>{% endif %}
+    {% if pkg %}<span>pacote <b class="num font-normal text-zinc-300">{{ "%.0f"|format(pkg.current) }}°C</b> / máx {{ "%.0f"|format(pkg.high) }}°C</span>{% endif %}
+  </div>
+</section>

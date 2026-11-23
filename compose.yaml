@@ -1,0 +1,60 @@
+# ubuntu-server-hub — painel do servidor.
+# Configure no arquivo .env (copie de .env.example ou rode ./install.sh) e suba com:
+#   docker compose up -d --build
+name: hub
+
+services:
+  hub:
+    build:
+      context: .
+      args:
+        UBUNTU_VERSION: ${UBUNTU_VERSION:-26.04}
+        HUB_UID: ${HUB_UID:-1000}
+        HUB_GID: ${HUB_GID:-1000}
+    image: ubuntu-server-hub:latest
+    container_name: hub
+    restart: unless-stopped
+    # Rede e PIDs do host: o painel mostra os processos e a rede reais do servidor.
+    # Com a rede do host, o gunicorn escuta direto em HUB_BIND:HUB_PORT do servidor
+    # (padrão 127.0.0.1:8084 — só a própria máquina, um túnel ou SSH chegam nele).
+    network_mode: host
+    pid: host
+    group_add:
+      - "${DOCKER_GID:-999}"   # grupo do docker.sock no host (cartão Docker)
+    environment:
+      HUB_BIND: ${HUB_BIND:-127.0.0.1}
+      HUB_PORT: ${HUB_PORT:-8084}
+      HUB_DATA_DIR: /app/data
+      HUB_HOST_ROOT: /host
+      HUB_HOST_USER: ${HUB_HOST_USER:-}
+      DOCKER_SOCK: /var/run/docker.sock
+      # Aparência (vazio = detectado na máquina)
+      HUB_TITLE: ${HUB_TITLE:-}
+      HUB_SUBTITLE: ${HUB_SUBTITLE:-}
+      HUB_HOST_MODEL: ${HUB_HOST_MODEL:-}
+      HUB_CPU_NAME: ${HUB_CPU_NAME:-}
+      HUB_ICON_CDN: ${HUB_ICON_CDN:-https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons}
+      # Login (opcional, mas obrigatório se HUB_BIND não for 127.0.0.1)
+      HUB_USER: ${HUB_USER:-admin}
+      HUB_PASSWORD: ${HUB_PASSWORD:-}
+      HUB_ALLOW_NO_AUTH: ${HUB_ALLOW_NO_AUTH:-}
+      # Validação opcional do JWT do Cloudflare Access (deixe vazio para desligar)
+      CF_ACCESS_TEAM_DOMAIN: ${CF_ACCESS_TEAM_DOMAIN:-}
+      CF_ACCESS_AUD: ${CF_ACCESS_AUD:-}
+    volumes:
+      - ${HUB_DATA_PATH:-./data}:/app/data
+      - /:/host:ro                     # arquivos do host (dpkg, apt, /etc, /opt, discos), somente leitura
+      - /var/run/docker.sock:/var/run/docker.sock
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import os, urllib.request; b = os.environ.get('HUB_BIND', '127.0.0.1'); h = '127.0.0.1' if b in ('', '0.0.0.0', '::') else b; h = f'[{h}]' if ':' in h else h; urllib.request.urlopen(f\"http://{h}:{os.environ.get('HUB_PORT', '8084')}/healthz\", timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3

@@ -1,0 +1,14 @@
+{% if icons %}
+<div class="grid max-h-40 grid-cols-3 gap-1.5 overflow-y-auto pr-1">
+  {% for i in icons %}
+  <button type="button" title="{{ i.name }}" data-url="{{ i.url }}" onclick="pickIcon(this)"
+          class="flex min-w-0 items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900/60 px-2 py-1.5 text-left ring-cyan-400 hover:border-zinc-600 hover:bg-zinc-800 data-picked:border-cyan-500/60 data-picked:bg-zinc-800 data-picked:ring-1">
+    <img src="{{ i.url }}" alt="" width="20" height="20" class="h-5 w-5 shrink-0 object-contain" loading="lazy" onerror="this.closest('button').remove()">
+    <span class="min-w-0 truncate font-mono text-[11px] text-zinc-400">{{ i.name }}</span>
+  </button>
+  {% endfor %}
+</div>
+{% if not indexed %}<p class="mt-1 text-[11px] text-zinc-600">Lista de ícones indisponível agora — mostrando só o nome exato.</p>{% endif %}
+{% elif q %}
+<p class="py-2 text-center text-[11px] text-zinc-600">Nenhum ícone para “{{ q }}”. Tente outro nome (ex.: vscode, code-server) ou envie uma imagem.</p>
+{% endif %}

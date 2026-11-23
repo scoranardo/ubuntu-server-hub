@@ -1,0 +1,38 @@
+{% import "macros.html" as m %}
+<section id="apps" hx-get="/partials/apps" hx-trigger="{{ 'load delay:300ms, ' if initial }}every 60s [document.visibilityState === 'visible']" hx-swap="outerHTML">
+  {% for group, apps in groups.items() %}
+  <div class="mb-5 last:mb-0">
+    <h3 class="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">{{ group }}</h3>
+    <div class="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
+      {% for a in apps %}
+      {% set st = status.get(a.id) %}
+      <div class="app-tile group relative" data-q="{{ (a.name ~ ' ' ~ a.url ~ ' ' ~ (a.description or ''))|lower }}">
+        <a href="{{ a.url }}" target="_blank" rel="noopener"
+           class="flex h-full items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/60 p-3 transition hover:-translate-y-0.5 hover:border-cyan-500/40 hover:bg-zinc-900 focus:border-cyan-500/60 focus:outline-none">
+          {{ m.icon(a) }}
+          <div class="min-w-0">
+            <div class="flex items-center gap-1.5">
+              <span class="truncate text-sm font-medium text-zinc-100">{{ a.name }}</span>
+              {% if st %}
+                <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ 'bg-emerald-400' if st.up else 'bg-rose-500' }}"
+                      title="{{ ('online · HTTP ' ~ st.code ~ ' · ' ~ st.ms ~ ' ms') if st.up else 'offline' }}"></span>
+              {% endif %}
+            </div>
+            <div class="truncate font-mono text-[11px] text-zinc-500">{{ a.url.split('://', 1)[-1].rstrip('/') }}</div>
+            {% if a.description %}<div class="truncate text-[11px] text-zinc-600">{{ a.description }}</div>{% endif %}
+          </div>
+        </a>
+        <div class="edit-ctl absolute right-1.5 top-1.5 hidden gap-0.5 rounded-md bg-zinc-950/90 p-0.5 text-[11px] ring-1 ring-zinc-700">
+          <button title="Mover para trás" class="rounded px-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100" hx-post="/apps/{{ a.id }}/move/up" hx-target="#apps" hx-swap="outerHTML">◀</button>
+          <button title="Mover para frente" class="rounded px-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100" hx-post="/apps/{{ a.id }}/move/down" hx-target="#apps" hx-swap="outerHTML">▶</button>
+          <button title="Editar" class="rounded px-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100" hx-get="/apps/{{ a.id }}/form" hx-target="#app-dialog-body" hx-swap="innerHTML" hx-on::after-request="document.getElementById('app-dialog').showModal()">✎</button>
+          <button title="Remover" class="rounded px-1 text-rose-400 hover:bg-rose-500/20" hx-post="/apps/{{ a.id }}/delete" hx-target="#apps" hx-swap="outerHTML" hx-confirm="Remover o atalho {{ a.name }}?">✕</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% else %}
+  <p class="text-sm text-zinc-500">Nenhum atalho ainda — clique em <b>+ Novo</b>.</p>
+  {% endfor %}
+</section>

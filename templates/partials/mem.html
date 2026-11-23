@@ -1,0 +1,32 @@
+{% import "macros.html" as m %}
+{% set mem = s.mem %}
+<section id="mem-card" {% if oob %}hx-swap-oob="true"{% endif %} class="card">
+  {{ m.head("Memória", mem.total|bytes ~ " RAM") }}
+  {{ m.graph("RAM em uso", "%.0f%%"|format(mem.pct), h.mem, "sky", 100) }}
+
+  <div class="mt-4">
+    <div class="mb-1.5 flex justify-between font-mono text-xs">
+      <span class="text-zinc-400">RAM</span>
+      <span class="num text-zinc-200">{{ mem.used|bytes }} <span class="text-zinc-600">/ {{ mem.total|bytes }}</span></span>
+    </div>
+    <div class="flex h-2 w-full overflow-hidden rounded-full bg-zinc-800">
+      <div class="{{ m.BG[level(mem.pct, 70, 90)] }} transition-all duration-500" style="width: {{ mem.used_pct }}%"></div>
+      <div class="bg-sky-700/70 transition-all duration-500" style="width: {{ mem.cache_pct }}%"></div>
+    </div>
+    <div class="mt-1.5 flex gap-4 text-[11px] text-zinc-500">
+      <span><i class="mr-1 inline-block h-2 w-2 rounded-sm {{ m.BG[level(mem.pct, 70, 90)] }}"></i>em uso</span>
+      <span><i class="mr-1 inline-block h-2 w-2 rounded-sm bg-sky-700/70"></i>cache {{ mem.cache|bytes }}</span>
+      <span>livre {{ mem.available|bytes }}</span>
+    </div>
+  </div>
+
+  <div class="mt-4">
+    <div class="mb-1.5 flex justify-between font-mono text-xs">
+      <span class="text-zinc-400">Swap</span>
+      <span class="num text-zinc-200">
+        {% if mem.swap_total %}{{ mem.swap_used|bytes }} <span class="text-zinc-600">/ {{ mem.swap_total|bytes }}</span>{% else %}<span class="text-zinc-600">desativada</span>{% endif %}
+      </span>
+    </div>
+    {{ m.bar(mem.swap_pct, level(mem.swap_pct, 25, 60), "h-2") }}
+  </div>
+</section>

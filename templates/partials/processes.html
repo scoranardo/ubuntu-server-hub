@@ -1,0 +1,36 @@
+{% import "macros.html" as m %}
+<section id="procs" class="card"
+         hx-get="/partials/processes?sort={{ sort }}" hx-trigger="every 3s [document.visibilityState === 'visible']" hx-swap="outerHTML">
+  <div class="mb-3 flex items-center justify-between gap-2">
+    <h2 class="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Processos <span class="ml-1 font-mono normal-case tracking-normal text-zinc-600">{{ s.proc_count }} · {{ s.running }} rodando</span></h2>
+    <div class="flex rounded-md bg-zinc-800/80 p-0.5 font-mono text-[11px]">
+      {% for k, label in [("cpu", "CPU%"), ("mem", "MEM%")] %}
+      <button class="rounded px-2 py-0.5 {{ 'bg-zinc-700 text-zinc-100' if sort == k else 'text-zinc-400 hover:text-zinc-200' }}"
+              hx-get="/partials/processes?sort={{ k }}" hx-target="#procs" hx-swap="outerHTML">{{ label }}</button>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full font-mono text-xs">
+      <thead class="text-left text-[10px] uppercase tracking-wider text-zinc-500">
+        <tr class="border-b border-zinc-800">
+          <th class="py-1.5 pr-3 font-medium">PID</th><th class="pr-3 font-medium">Usuário</th>
+          <th class="pr-3 text-right font-medium">CPU%</th><th class="pr-3 text-right font-medium">MEM%</th>
+          <th class="pr-3 text-right font-medium">RES</th><th class="font-medium">Comando</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in procs %}
+        <tr class="border-b border-zinc-800/50 hover:bg-zinc-800/40">
+          <td class="num py-1 pr-3 text-zinc-500">{{ p.pid }}</td>
+          <td class="pr-3 {{ 'text-rose-300' if p.user == 'root' else 'text-zinc-300' }}">{{ p.user }}</td>
+          <td class="num pr-3 text-right {{ m.TX[level(p.cpu, 25, 75)] if p.cpu > 0.5 else 'text-zinc-500' }}">{{ "%.1f"|format(p.cpu) }}</td>
+          <td class="num pr-3 text-right {{ 'text-sky-300' if p.mem > 1 else 'text-zinc-500' }}">{{ "%.1f"|format(p.mem) }}</td>
+          <td class="num pr-3 text-right text-zinc-400">{{ p.res|bytes }}</td>
+          <td class="max-w-0 truncate text-zinc-300" title="{{ p.cmd }}"><span class="text-zinc-100">{{ p.name }}</span> <span class="text-zinc-500">{{ p.cmd[p.cmd.find(' ')+1:] if ' ' in p.cmd else '' }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>

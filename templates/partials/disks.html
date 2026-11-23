@@ -1,0 +1,30 @@
+{% import "macros.html" as m %}
+<section id="disk-card" {% if oob %}hx-swap-oob="true"{% endif %} class="card">
+  {{ m.head("Armazenamento") }}
+  <div class="space-y-4">
+    {% for d in s.disks %}
+    <div>
+      <div class="flex items-center gap-2">
+        <span class="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[10px] font-semibold {{ 'text-cyan-300' if d.kind != 'HD' else 'text-amber-300' }}">{{ d.kind }}</span>
+        <span class="truncate text-sm text-zinc-200">{{ d.model or d.name }}</span>
+        <span class="ml-auto shrink-0 font-mono text-[11px] text-zinc-500">{{ d.name }} · {{ d.size|bytes }}</span>
+      </div>
+      <div class="mt-1 flex gap-3 font-mono text-[11px] text-zinc-500">
+        <span>▼ leitura <b class="num font-normal text-zinc-300">{{ d.read|bytes("/s") }}</b></span>
+        <span>▲ escrita <b class="num font-normal text-zinc-300">{{ d.write|bytes("/s") }}</b></span>
+      </div>
+      {% for p in d.parts %}
+      <div class="mt-2">
+        <div class="mb-1 flex justify-between font-mono text-xs">
+          <span class="text-zinc-400">{{ p.mount }} <span class="text-zinc-600">{{ p.fstype }}</span></span>
+          <span class="num text-zinc-200">{{ p.used|bytes }} <span class="text-zinc-600">/ {{ p.total|bytes }} · {{ "%.0f"|format(p.pct) }}%</span></span>
+        </div>
+        {{ m.bar(p.pct, level(p.pct, 75, 90), "h-2") }}
+      </div>
+      {% else %}
+      <div class="mt-1 text-[11px] text-zinc-600">sem partições montadas</div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+</section>

@@ -1,0 +1,8 @@
+{% import "macros.html" as m %}
+<div id="topbar-stats" {% if oob %}hx-swap-oob="true"{% endif %} class="flex flex-wrap items-center gap-x-5 gap-y-1 font-mono text-xs text-zinc-400">
+  <span title="Tempo ligado">⏱ <b class="font-normal text-zinc-200">{{ s.uptime|duration }}</b></span>
+  <span title="CPU">CPU <b class="num font-normal {{ m.TX[level(s.cpu.total)] }}">{{ "%.0f"|format(s.cpu.total) }}%</b></span>
+  {% if s.cpu.pkg_temp %}<span title="Temperatura">🌡 <b class="num font-normal {{ m.TX[level(s.cpu.pkg_temp.current, 70, 85)] }}">{{ "%.0f"|format(s.cpu.pkg_temp.current) }}°C</b></span>{% endif %}
+  <span title="RAM">RAM <b class="num font-normal {{ m.TX[level(s.mem.pct, 70, 90)] }}">{{ "%.0f"|format(s.mem.pct) }}%</b></span>
+  <span title="Carga média">load <b class="num font-normal text-zinc-200">{{ "%.2f"|format(s.cpu.load[0]) }}</b></span>
+</div>

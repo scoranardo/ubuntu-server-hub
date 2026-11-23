@@ -1,0 +1,20 @@
+@import "tailwindcss";
+@source "../templates";
+
+@layer components {
+  .card { @apply rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 backdrop-blur; }
+}
+.num { font-variant-numeric: tabular-nums; }
+body.editing .edit-ctl { display: flex; }
+body.layout-editing .layout-ctl { display: flex; }
+body.layout-editing .layout-only { display: inline-block; }
+body.layout-editing .panel > section { outline: 1px dashed rgb(245 158 11 / .45); outline-offset: 2px; }
+.panel > section { height: 100%; }
+body.editing .app-tile > a { pointer-events: none; opacity: .75; }
+.htmx-indicator { display: none; }
+.htmx-request .htmx-indicator, .htmx-request.htmx-indicator { display: inline; }
+dialog::backdrop { background: rgb(0 0 0 / .6); backdrop-filter: blur(2px); }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
+[hidden] { display: none !important; }
+body { background-image: radial-gradient(ellipse at top, rgb(34 211 238 / .06), transparent 60%); background-attachment: fixed; }

@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# hub-notify — envia um evento para o cartão "Backups e discos" do hub.
+#
+#   hub-notify CHAVE NIVEL TITULO [MENSAGEM] [ESPERADO_HORAS]
+#   hub-notify --json '{"chave": "...", ...}'      (JSON completo, formato do README)
+#
+#   NIVEL: ok | aviso | erro
+#   ex.:  hub-notify backup:fotos ok "Backup das fotos" "terminou" 26
+#
+# Configuração (variáveis de ambiente ou /etc/hub-notify.env, uma por linha KEY=valor):
+#   HUB_URL         padrão http://127.0.0.1:8084
+#   HUB_TOKEN_FILE  caminho do data/notify_token do hub (obrigatório se não houver HUB_TOKEN)
+#   HUB_TOKEN       o próprio token (tem prioridade sobre o arquivo)
+set -euo pipefail
+
+conf_get() {  # lê KEY=valor de /etc/hub-notify.env sem executar o arquivo
+  [ -r /etc/hub-notify.env ] && sed -n "s/^$1=//p" /etc/hub-notify.env | tail -n1 || true
+}
+url=${HUB_URL:-$(conf_get HUB_URL)}
+url=${url:-http://127.0.0.1:8084}
+token_file=${HUB_TOKEN_FILE:-$(conf_get HUB_TOKEN_FILE)}
+token=${HUB_TOKEN:-}
+if [ -z "$token" ]; then
+  [ -n "$token_file" ] && [ -r "$token_file" ] || {
+    echo "hub-notify: não consigo ler o token '${token_file:-?}' (defina HUB_TOKEN_FILE em /etc/hub-notify.env)" >&2; exit 2; }
+  token=$(tr -d '[:space:]' < "$token_file")
+fi
+
+if [ "${1:-}" = "--json" ]; then
+  body=${2:?uso: hub-notify --json '{...}'}
+else
+  [ $# -ge 3 ] || { sed -n '2,10p' "$0" >&2; exit 2; }
+  # monta o JSON com python3 (escapa aspas e quebras de linha corretamente)
+  body=$(python3 -c 'import json, sys
+a = sys.argv[1:] + [""] * 5
+d = {"chave": a[0], "nivel": a[1], "titulo": a[2], "mensagem": a[3], "origem": "hub-notify"}
+if a[4]:
+    d["esperado_horas"] = float(a[4])
+print(json.dumps(d))' "$@")
+fi
+
+# o token vai por stdin (-H @-) para não aparecer na lista de processos (ps)
+printf 'X-Hub-Token: %s\n' "$token" | curl -fsS --max-time 10 -X POST "$url/api/eventos" \
+  -H @- -H 'Content-Type: application/json' --data-binary "$body" >/dev/null

@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="pt-BR" class="h-full">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ sys.title }} · hub</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect width=%2232%22 height=%2232%22 rx=%227%22 fill=%22%2309090b%22/><path d=%22M7 22l5-6 4 4 9-10%22 stroke=%22%2322d3ee%22 stroke-width=%223%22 fill=%22none%22 stroke-linecap=%22round%22/></svg>">
+  <link rel="stylesheet" href="{{ asset('app.css') }}">
+  <script src="{{ asset('htmx.min.js') }}" defer></script>
+</head>
+<body class="min-h-full bg-zinc-950 text-zinc-300 antialiased">
+  <div hx-get="/partials/live" hx-trigger="every 2s [document.visibilityState === 'visible']" hx-swap="none"></div>
+
+  <main class="mx-auto max-w-[1600px] px-4 py-5 sm:px-6">
+    <header class="mb-6 flex flex-wrap items-center gap-x-6 gap-y-3">
+      <div class="flex items-center gap-3">
+        <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-500/10 ring-1 ring-cyan-500/30">
+          <svg viewBox="0 0 24 24" class="h-5 w-5 text-cyan-300" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 17l6-6 4 4 8-8"/></svg>
+        </div>
+        <div>
+          <h1 class="font-mono text-lg font-semibold leading-tight text-zinc-100">{{ sys.title }}</h1>
+          <div class="text-[11px] text-zinc-500">{{ sys.subtitle }}</div>
+        </div>
+      </div>
+      {% include "partials/topbar.html" %}
+      <div class="ml-auto flex items-center gap-2">
+        <span id="layout-msg" class="text-[11px] text-amber-300/80"></span>
+        <button type="button" id="layout-reset" onclick="resetLayout()" title="Volta a ordem e os tamanhos originais"
+                class="layout-only hidden rounded-md bg-zinc-800 px-2.5 py-1 text-xs text-zinc-300 hover:bg-zinc-700">↺ Padrão</button>
+        <button type="button" id="layout-btn" onclick="toggleLayout(this)" title="Mover e redimensionar os blocos"
+                class="rounded-md bg-zinc-800 px-2.5 py-1 text-xs text-zinc-300 hover:bg-zinc-700">▦ Layout</button>
+      </div>
+      <div class="text-right">
+        <div id="clock" class="num font-mono text-lg text-zinc-200"></div>
+        <div id="date" class="text-[11px] text-zinc-500"></div>
+      </div>
+    </header>
+
+    <!-- Atalhos -->
+    <div class="card mb-5">
+      <div class="mb-4 flex flex-wrap items-center gap-2">
+        <h2 class="mr-auto text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Aplicações</h2>
+        <input id="app-search" type="search" placeholder="buscar app…  ( / )" oninput="filterApps(this.value)"
+               onkeydown="if(event.key==='Enter'){const a=document.querySelector('.app-tile:not([hidden]) a'); if(a) window.open(a.href,'_blank')}"
+               class="w-48 rounded-md border border-zinc-800 bg-zinc-950 px-2.5 py-1 font-mono text-xs text-zinc-200 placeholder:text-zinc-600 focus:border-cyan-500/50 focus:outline-none">
+        <button onclick="document.body.classList.toggle('editing'); this.classList.toggle('!bg-amber-500/20'); this.classList.toggle('!text-amber-200')"
+                class="rounded-md bg-zinc-800 px-2.5 py-1 text-xs text-zinc-300 hover:bg-zinc-700">✎ Organizar</button>
+        <button hx-get="/apps/form" hx-target="#app-dialog-body" hx-swap="innerHTML" hx-on::after-request="document.getElementById('app-dialog').showModal()"
+                class="rounded-md bg-cyan-500 px-2.5 py-1 text-xs font-medium text-zinc-950 hover:bg-cyan-400">+ Novo</button>
+      </div>
+      {% include "partials/apps.html" %}
+    </div>
+
+    <!-- Blocos (ordem e tamanho em data/layout.json; "▦ Layout" liga os controles) -->
+    <div id="panels" class="grid grid-cols-1 gap-5 lg:grid-cols-3">
+      {% for p in layout %}
+      <div class="panel @container relative min-w-0 {{ SPAN[p.size] }}" data-panel="{{ p.id }}" data-size="{{ p.size }}">
+        <div class="layout-ctl absolute right-2 top-2 z-10 hidden items-center gap-0.5 rounded-md bg-zinc-950/95 p-0.5 font-mono text-[11px] ring-1 ring-amber-500/50">
+          <span class="px-1 text-amber-300/80">{{ PANEL_NAMES[p.id] }}</span>
+          <button type="button" title="Mover para cima" onclick="movePanel(this, 'up')" class="rounded px-1.5 text-zinc-300 hover:bg-zinc-800">↑</button>
+          <button type="button" title="Mover para baixo" onclick="movePanel(this, 'down')" class="rounded px-1.5 text-zinc-300 hover:bg-zinc-800">↓</button>
+          <button type="button" title="Mover para a esquerda" onclick="movePanel(this, 'left')" class="rounded px-1.5 text-zinc-300 hover:bg-zinc-800">←</button>
+          <button type="button" title="Mover para a direita" onclick="movePanel(this, 'right')" class="rounded px-1.5 text-zinc-300 hover:bg-zinc-800">→</button>
+          <span class="mx-0.5 h-4 w-px bg-zinc-700"></span>
+          {% for n in (1, 2, 3) %}
+          <button type="button" title="Largura {{ n }}{{ ' (largura toda)' if n == 3 else '' }}" data-size-btn="{{ n }}" onclick="sizePanel(this, {{ n }})"
+                  class="rounded px-1.5 text-zinc-400 hover:bg-zinc-800 data-on:bg-amber-500/25 data-on:text-amber-200" {% if p.size == n %}data-on{% endif %}>{{ n }}</button>
+          {% endfor %}
+        </div>
+        {% if p.id == "cpu" %}{% include "partials/cpu.html" %}
+        {% elif p.id == "mem" %}{% include "partials/mem.html" %}
+        {% elif p.id == "disks" %}{% include "partials/disks.html" %}
+        {% elif p.id == "net" %}{% include "partials/net.html" %}
+        {% elif p.id == "sys" %}{% include "partials/sys.html" %}
+        {% elif p.id == "procs" %}{% include "partials/processes.html" %}
+        {% elif p.id == "updates" %}
+        <section id="updates" class="card" hx-get="/partials/updates" hx-trigger="load" hx-swap="outerHTML">
+          <h2 class="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Atualizações</h2>
+          <p class="mt-3 animate-pulse text-sm text-zinc-600">verificando…</p>
+        </section>
+        {% elif p.id == "backups" %}
+        <section id="backups" class="card" hx-get="/partials/backups" hx-trigger="load" hx-swap="outerHTML">
+          <h2 class="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Backups e discos</h2>
+          <p class="mt-3 animate-pulse text-sm text-zinc-600">carregando…</p>
+        </section>
+        {% elif p.id == "docker" %}
+        <section id="docker" class="card" hx-get="/partials/docker" hx-trigger="load" hx-swap="outerHTML">
+          <h2 class="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Docker</h2>
+          <p class="mt-3 animate-pulse text-sm text-zinc-600">consultando containers…</p>
+        </section>
+        {% elif p.id == "installed" %}
+        <section id="installed" class="card" hx-get="/partials/installed" hx-trigger="load" hx-swap="outerHTML">
+          <h2 class="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Instalados por você</h2>
+          <p class="mt-3 animate-pulse text-sm text-zinc-600">lendo pacotes…</p>
+        </section>
+        {% elif p.id == "keys" %}
+        <section class="card">
+          <h2 class="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Atalhos de teclado</h2>
+          <ul class="space-y-1.5 font-mono text-xs text-zinc-400">
+            <li><kbd class="rounded bg-zinc-800 px-1.5 text-zinc-200">/</kbd> buscar app</li>
+            <li><kbd class="rounded bg-zinc-800 px-1.5 text-zinc-200">Enter</kbd> abrir o primeiro resultado</li>
+            <li><kbd class="rounded bg-zinc-800 px-1.5 text-zinc-200">Esc</kbd> limpar busca</li>
+          </ul>
+          <p class="mt-4 text-[11px] text-zinc-600">Métricas a cada 2 s · processos 3 s · Docker 10 s · atualizações 15 min. Tudo pausa com a aba em segundo plano.</p>
+        </section>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </main>
+
+  <dialog id="app-dialog" class="m-auto max-h-[90vh] w-[28rem] max-w-[92vw] rounded-xl border border-zinc-700 bg-zinc-900 p-5 text-zinc-300 shadow-2xl">
+    <div id="app-dialog-body"></div>
+  </dialog>
+
+  <script>
+    function filterApps(q) {
+      q = q.trim().toLowerCase();
+      document.querySelectorAll('.app-tile').forEach(t => t.hidden = q && !t.dataset.q.includes(q));
+    }
+    function filterList(input, id) {
+      const q = input.value.trim().toLowerCase();
+      document.querySelectorAll('#' + id + ' > li[data-q]').forEach(li => li.hidden = q && !li.dataset.q.includes(q));
+    }
+    // ---------------------------------------------------------------- layout dos blocos
+    const SPAN = {1: 'lg:col-span-1', 2: 'lg:col-span-2', 3: 'lg:col-span-3'};
+    const panelList = () => [...document.querySelectorAll('#panels > .panel')];
+    function toggleLayout(btn) {
+      const on = document.body.classList.toggle('layout-editing');
+      btn.classList.toggle('!bg-amber-500/20', on); btn.classList.toggle('!text-amber-200', on);
+      btn.textContent = on ? '✓ Concluir' : '▦ Layout';
+      document.getElementById('layout-reset').classList.toggle('hidden', !on);
+    }
+    let layoutTimer;
+    function saveLayout() {
+      const msg = document.getElementById('layout-msg');
+      clearTimeout(layoutTimer);
+      layoutTimer = setTimeout(async () => {
+        const order = panelList().map(p => p.dataset.panel + ':' + p.dataset.size).join(',');
+        try {
+          const r = await fetch('/layout', { method: 'POST', body: new URLSearchParams({ order }) });
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          msg.textContent = 'layout salvo';
+        } catch (e) { msg.textContent = 'não foi possível salvar (' + e.message + ')'; }
+        setTimeout(() => { if (msg.textContent === 'layout salvo') msg.textContent = ''; }, 2000);
+      }, 250);
+    }
+    function sizePanel(btn, n) {
+      const p = btn.closest('.panel');
+      p.classList.remove(...Object.values(SPAN)); p.classList.add(SPAN[n]);
+      p.dataset.size = n;
+      p.querySelectorAll('[data-size-btn]').forEach(b => b.toggleAttribute('data-on', +b.dataset.sizeBtn === n));
+      saveLayout();
+    }
+    function movePanel(btn, dir) {
+      const p = btn.closest('.panel'), list = panelList(), i = list.indexOf(p);
+      let target = null;
+      if (dir === 'left') target = list[i - 1];
+      else if (dir === 'right') target = list[i + 1];
+      else {
+        // cima/baixo: o bloco da linha vizinha que mais se sobrepõe na horizontal
+        const r = p.getBoundingClientRect(), rows = list.filter(q => q !== p)
+          .map(q => [q, q.getBoundingClientRect()])
+          .filter(([, b]) => dir === 'up' ? b.top < r.top - 1 : b.top > r.top + 1);
+        if (rows.length) {
+          const rowTop = dir === 'up' ? Math.max(...rows.map(([, b]) => b.top)) : Math.min(...rows.map(([, b]) => b.top));
+          const overlap = b => Math.min(b.right, r.right) - Math.max(b.left, r.left);
+          target = rows.filter(([, b]) => Math.abs(b.top - rowTop) < 2)
+            .sort((x, y) => overlap(y[1]) - overlap(x[1]))[0][0];
+        }
+      }
+      if (!target) return;
+      const mark = document.createElement('div');
+      target.replaceWith(mark); p.replaceWith(target); mark.replaceWith(p);
+      p.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      saveLayout();
+    }
+    async function resetLayout() {
+      if (!confirm('Voltar a ordem e os tamanhos originais dos blocos?')) return;
+      const r = await fetch('/layout/reset', { method: 'POST' });
+      if (r.ok) location.reload();
+    }
+    // mantém o filtro de apps após o HTMX recarregar o grid
+    // Formulário de atalho: escolher ícone da busca e atualizar a prévia
+    function iconPreview(f) {
+      const v = f.elements.icon.value.trim(), box = f.querySelector('#icon-preview > div');
+      if (!box) return;
+      box.replaceChildren();
+      if (/^(https?:)?\//.test(v)) {
+        const img = document.createElement('img');
+        img.src = v; img.alt = ''; img.className = 'h-3/5 w-3/5 object-contain';
+        box.append(img);
+      } else {
+        const s = document.createElement('span');
+        if (v) s.textContent = v;
+        else { s.className = 'font-mono text-sm font-bold text-cyan-300'; s.textContent = (f.elements.name.value || '?').slice(0, 2).toUpperCase(); }
+        box.append(s);
+      }
+    }
+    async function uploadIcon(input) {
+      const f = input.form, file = input.files[0];
+      if (!file) return;
+      const msg = f.querySelector('#icon-upload-msg');
+      msg.textContent = 'enviando…';
+      const body = new FormData();
+      body.append('file', file);
+      try {
+        const r = await fetch('/icons/upload', { method: 'POST', body });
+        const j = await r.json().catch(() => ({ error: 'HTTP ' + r.status }));
+        if (!r.ok) throw new Error(j.error || 'HTTP ' + r.status);
+        f.elements.icon.value = j.url;
+        f.querySelectorAll('#icon-results [data-picked]').forEach(b => delete b.dataset.picked);
+        iconPreview(f);
+        msg.textContent = 'enviado ✓';
+      } catch (e) {
+        msg.textContent = e.message === 'HTTP 413' ? 'imagem muito grande' : e.message;
+      }
+      input.value = '';
+    }
+    function pickIcon(btn) {
+      const f = btn.closest('form');
+      f.elements.icon.value = btn.dataset.url;
+      f.querySelectorAll('#icon-results [data-picked]').forEach(b => delete b.dataset.picked);
+      btn.dataset.picked = '';
+      iconPreview(f);
+    }
+    document.body.addEventListener('htmx:afterSwap', e => { if (e.detail.target.id === 'apps' || e.target.id === 'apps') filterApps(document.getElementById('app-search').value); });
+    document.addEventListener('keydown', e => {
+      const s = document.getElementById('app-search');
+      if (e.key === '/' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) { e.preventDefault(); s.focus(); }
+      if (e.key === 'Escape' && document.activeElement === s) { s.value = ''; filterApps(''); s.blur(); }
+    });
+    function tick() {
+      const d = new Date();
+      document.getElementById('clock').textContent = d.toLocaleTimeString('pt-BR');
+      const ds = d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
+      document.getElementById('date').textContent = ds.charAt(0).toUpperCase() + ds.slice(1);
+    }
+    tick(); setInterval(tick, 1000);
+  </script>
+</body>
+</html>

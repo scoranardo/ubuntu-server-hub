@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# smartd-hub-notify — chamado pelo smartd (opção -M exec) quando um disco tem problema.
+# O smartd passa os detalhes em variáveis SMARTD_*. Instale com:
+#   sudo install -m 755 scripts/smartd-hub-notify /usr/local/bin/
+# e veja docs/pt-BR/smartd.md (ou docs/en/smartd.md).
+set -euo pipefail
+
+: "${HUB_NOTIFY:=/usr/local/bin/hub-notify}"
+dev=${SMARTD_DEVICE:-desconhecido}
+tipo=${SMARTD_FAILTYPE:-}
+msg=${SMARTD_FULLMESSAGE:-${SMARTD_MESSAGE:-sem detalhes}}
+
+case "$tipo" in
+  EmailTest) nivel=ok ;;                               # disparado por "-M test"
+  Temperature|ErrorCount|SelfTest|Usage) nivel=aviso ;;
+  *) nivel=erro ;;                                     # Health, FailedReadSmart..., etc.
+esac
+[ "$tipo" = EmailTest ] && msg="teste do smartd: notificação funcionando"
+
+exec "$HUB_NOTIFY" "disco:${dev}" "$nivel" "Disco ${dev}" "${tipo:+[$tipo] }${msg}"

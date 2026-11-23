@@ -1,0 +1,38 @@
+{% import "macros.html" as m %}
+<section id="docker" class="card"
+         hx-get="/partials/docker" hx-trigger="every 10s [document.visibilityState === 'visible']" hx-swap="outerHTML">
+  {{ m.head("Docker", (d.running ~ " rodando / " ~ d.total ~ " containers") if not d.error else "") }}
+  {% if d.error %}
+    <p class="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">{{ d.error }}</p>
+  {% elif not d["items"] %}
+    <p class="text-sm text-zinc-500">Nenhum container.</p>
+  {% else %}
+  <div class="overflow-x-auto">
+    <table class="w-full font-mono text-xs">
+      <thead class="text-left text-[10px] uppercase tracking-wider text-zinc-500">
+        <tr class="border-b border-zinc-800">
+          <th class="py-1.5 pr-3 font-medium">Nome</th><th class="pr-3 font-medium">Imagem</th><th class="pr-3 font-medium">Status</th>
+          <th class="pr-3 font-medium">Portas</th><th class="pr-3 text-right font-medium">CPU</th><th class="text-right font-medium">Memória</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in d["items"] %}
+        {% set dot = "bg-emerald-400" if c.state == "running" and c.health != "unhealthy" else "bg-amber-400" if c.state in ("restarting", "paused") or c.health == "unhealthy" else "bg-zinc-600" %}
+        <tr class="border-b border-zinc-800/50 hover:bg-zinc-800/40 {{ 'opacity-60' if c.state != 'running' }}">
+          <td class="py-1.5 pr-3">
+            <span class="mr-1.5 inline-block h-2 w-2 rounded-full {{ dot }} {{ 'shadow-[0_0_6px] shadow-emerald-400/60' if c.state == 'running' }}"></span>
+            <span class="text-zinc-100">{{ c.name }}</span>
+            {% if c.project %}<span class="ml-1 rounded bg-zinc-800 px-1 text-[10px] text-zinc-500">{{ c.project }}</span>{% endif %}
+          </td>
+          <td class="max-w-[16rem] truncate pr-3 text-zinc-400" title="{{ c.image }}">{{ c.image }}</td>
+          <td class="whitespace-nowrap pr-3 {{ 'text-rose-300' if c.health == 'unhealthy' else 'text-zinc-400' }}">{{ c.status }}</td>
+          <td class="pr-3 text-zinc-500">{{ c.ports|join(", ") or "—" }}</td>
+          <td class="num whitespace-nowrap pr-3 text-right text-zinc-300">{{ ("%.1f%%"|format(c.stats.cpu)) if c.stats else "—" }}</td>
+          <td class="num whitespace-nowrap text-right text-zinc-300">{{ c.stats.mem|bytes if c.stats else "—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</section>

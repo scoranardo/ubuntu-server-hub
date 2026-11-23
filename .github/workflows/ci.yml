@@ -1,0 +1,41 @@
+# Checks only. Runs on GitHub-hosted runners, never on your server.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: No local config or data committed
+        run: |
+          if git ls-files | grep -E '^(\.env$|data/)'; then
+            echo "::error::.env or data/ must never be committed"; exit 1
+          fi
+
+      - name: Shell scripts
+        run: bash -n install.sh scripts/hub-notify scripts/smartd-hub-notify
+
+      - name: Python
+        run: |
+          python3 -m venv /tmp/venv
+          /tmp/venv/bin/pip install -q -r requirements.txt
+          /tmp/venv/bin/python -m py_compile app.py alertas.py collectors.py
+          HUB_DATA_DIR=$(mktemp -d) /tmp/venv/bin/python -c "import app; c = app.app.test_client(); assert c.get('/healthz').status_code == 200; assert c.get('/').status_code == 200"
+
+      - name: Refuses to listen on the network without a login
+        run: |
+          if HUB_DATA_DIR=$(mktemp -d) HUB_BIND=0.0.0.0 /tmp/venv/bin/python -c "import app" 2>/dev/null; then
+            echo "::error::app started on 0.0.0.0 without HUB_PASSWORD"; exit 1
+          fi
+
+      - name: Docker image
+        run: docker build --build-arg UBUNTU_VERSION=24.04 -t ubuntu-server-hub:ci .

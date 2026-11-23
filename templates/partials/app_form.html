@@ -1,0 +1,45 @@
+{% import "macros.html" as m %}
+{% set field = "w-full rounded-md border border-zinc-700 bg-zinc-950 px-2.5 py-1.5 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500/60 focus:outline-none" %}
+<form hx-post="{{ '/apps/' ~ a.id if a else '/apps' }}" hx-target="#apps" hx-swap="outerHTML"
+      hx-on::after-request="if (event.detail.elt === this && event.detail.successful) this.closest('dialog').close()" class="space-y-3">
+  <h3 class="text-base font-semibold text-zinc-100">{{ "Editar atalho" if a else "Novo atalho" }}</h3>
+  <div class="flex items-end gap-3">
+    <div id="icon-preview" title="Prévia do ícone">{{ m.icon(a or {"name": "?", "icon": ""}) }}</div>
+    <label class="block flex-1"><span class="mb-1 block text-[11px] text-zinc-400">Nome *</span>
+      <input name="name" required value="{{ a.name if a else '' }}" placeholder="Jellyfin" class="{{ field }}" autofocus
+             oninput="iconPreview(this.form)"></label>
+  </div>
+  <div class="space-y-2 rounded-lg border border-zinc-800 bg-zinc-950/50 p-2.5">
+    <span class="block text-[11px] text-zinc-400">Ícone <span class="text-zinc-600">— busque e clique, ou digite um emoji/URL</span></span>
+    <input type="search" name="icon_q" value="{{ a.name if a else '' }}" placeholder="buscar ícone: vscode, jellyfin, nextcloud…"
+           hx-get="/icons/search" hx-trigger="load, input changed delay:300ms, search" hx-target="#icon-results" hx-swap="innerHTML"
+           onkeydown="if (event.key === 'Enter') event.preventDefault()" class="{{ field }}">
+    <div id="icon-results"></div>
+    <div class="flex items-center gap-2">
+      <input name="icon" value="{{ a.icon if a else '' }}" placeholder="🚀 ou https://…/icone.svg" class="{{ field }} min-w-0 flex-1 font-mono text-xs"
+             oninput="iconPreview(this.form)">
+      <label class="shrink-0 cursor-pointer rounded-md bg-zinc-800 px-2.5 py-1.5 text-xs text-zinc-300 hover:bg-zinc-700" title="PNG, JPG, GIF, WEBP, ICO ou SVG · até 512 KB">
+        ⬆ Enviar
+        <input type="file" accept=".png,.jpg,.jpeg,.gif,.webp,.ico,.svg,image/*" class="hidden" onchange="uploadIcon(this)">
+      </label>
+    </div>
+    <p id="icon-upload-msg" class="min-h-4 text-[11px] text-zinc-500"></p>
+  </div>
+  <label class="block"><span class="mb-1 block text-[11px] text-zinc-400">Endereço *</span>
+    <input name="url" type="url" required value="{{ a.url if a else 'https://' }}" placeholder="https://jellyfin.exemplo.com" class="{{ field }} font-mono"></label>
+  <label class="block"><span class="mb-1 block text-[11px] text-zinc-400">Descrição</span>
+    <input name="description" value="{{ a.description if a else '' }}" placeholder="opcional" class="{{ field }}"></label>
+  <label class="block"><span class="mb-1 block text-[11px] text-zinc-400">Grupo</span>
+    <input name="group" list="group-list" value="{{ a.group if a else (group_names[0] if group_names else 'Apps') }}" class="{{ field }}">
+    <datalist id="group-list">{% for g in group_names %}<option value="{{ g }}">{% endfor %}</datalist></label>
+  <label class="block"><span class="mb-1 block text-[11px] text-zinc-400">URL interna para checar se está no ar <span class="text-zinc-600">(opcional)</span></span>
+    <input name="check_url" value="{{ a.check_url if a else '' }}" placeholder="http://127.0.0.1:8080" class="{{ field }} font-mono"></label>
+  <p class="text-[11px] leading-relaxed text-zinc-500">
+    Ícones do <span class="text-zinc-400">dashboard-icons</span> (quase todo app self-hosted).
+    Use a URL interna porque um endereço público atrás de login (Cloudflare Access, proxy) sempre responde, mesmo com o app fora do ar.
+  </p>
+  <div class="flex justify-end gap-2 pt-1">
+    <button type="button" onclick="this.closest('dialog').close()" class="rounded-md px-3 py-1.5 text-sm text-zinc-400 hover:bg-zinc-800">Cancelar</button>
+    <button class="rounded-md bg-cyan-500 px-3 py-1.5 text-sm font-medium text-zinc-950 hover:bg-cyan-400">Salvar</button>
+  </div>
+</form>

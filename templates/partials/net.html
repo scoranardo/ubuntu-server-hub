@@ -1,0 +1,27 @@
+{% import "macros.html" as m %}
+<section id="net-card" {% if oob %}hx-swap-oob="true"{% endif %} class="card">
+  {{ m.head("Rede") }}
+  <div class="grid grid-cols-2 gap-2">
+    {{ m.graph("▼ Download", s.rx|bytes("/s"), h.rx, "emerald") }}
+    {{ m.graph("▲ Upload", s.tx|bytes("/s"), h.tx, "violet") }}
+  </div>
+  <div class="mt-3 space-y-2">
+    {% for n in s.net %}
+    <div class="flex items-center gap-2 font-mono text-xs">
+      <span class="text-zinc-300">{{ n.name }}</span>
+      <span class="text-zinc-600">{{ n.ip }}</span>
+      <span class="num ml-auto text-emerald-300">▼ {{ n.rx|bytes("/s") }}</span>
+      <span class="num w-24 text-right text-violet-300">▲ {{ n.tx|bytes("/s") }}</span>
+    </div>
+    <div class="-mt-1 text-right font-mono text-[10px] text-zinc-600">total ▼ {{ n.rx_total|bytes }} · ▲ {{ n.tx_total|bytes }}{% if n.speed %} · {{ n.speed }} Mb/s{% endif %}</div>
+    {% endfor %}
+  </div>
+  {% if s.sensors %}
+  <div class="mt-4 border-t border-zinc-800 pt-3">
+    <div class="mb-1.5 text-[10px] uppercase tracking-wider text-zinc-500">Outros sensores</div>
+    <div class="flex flex-wrap gap-x-4 gap-y-1 font-mono text-[11px] text-zinc-500">
+      {% for t in s.sensors %}<span>{{ t.chip }}{% if t.label != t.chip %}/{{ t.label }}{% endif %} <b class="font-normal {{ m.TX[level(t.current, 60, 80)] }}">{{ "%.0f"|format(t.current) }}°C</b></span>{% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</section>

@@ -1,0 +1,28 @@
+{% import "macros.html" as m %}
+<section id="sys-card" {% if oob %}hx-swap-oob="true"{% endif %} class="card">
+  {{ m.head("Sistema") }}
+  <div class="font-mono text-xs leading-6">
+    <div class="mb-1 text-sm"><span class="text-cyan-300">{{ sys.user }}</span><span class="text-zinc-500">@</span><span class="text-cyan-300">{{ sys.hostname }}</span></div>
+    <div class="mb-2 h-px w-full bg-zinc-800"></div>
+    {% set rows = [
+      ("Host", sys.host_model),
+      ("SO", sys.os ~ " " ~ sys.arch),
+      ("Kernel", sys.kernel),
+      ("Ligado há", sys.uptime|duration),
+      ("Boot", sys.boot),
+      ("Pacotes", sys.packages.dpkg ~ " (dpkg)" ~ ((", " ~ sys.packages.snap ~ " (snap)") if sys.packages.snap else "") ~ ((", " ~ sys.packages.flatpak ~ " (flatpak)") if sys.packages.flatpak else "")),
+      ("CPU", sys.cpu_model),
+      ("Memória", sys.mem.used|bytes ~ " / " ~ sys.mem.total|bytes),
+      ("Disco (/)", (sys.root.used|bytes ~ " / " ~ sys.root.total|bytes ~ " (" ~ ("%.0f"|format(sys.root.pct)) ~ "%)") if sys.root else "—"),
+      ("IP local", sys.ip or "—"),
+      ("Processos", s.proc_count ~ " · " ~ s.threads ~ " threads · " ~ s.running ~ " rodando"),
+      ("Sessões", sys.users|join(", ") or "nenhuma"),
+    ] %}
+    {% for k, v in rows %}
+    <div class="flex gap-3"><span class="w-20 shrink-0 text-violet-300">{{ k }}</span><span class="truncate text-zinc-300" title="{{ v }}">{{ v }}</span></div>
+    {% endfor %}
+    <div class="mt-3 flex gap-1">
+      {% for c in ["bg-zinc-700","bg-rose-500","bg-emerald-500","bg-amber-400","bg-sky-500","bg-violet-500","bg-cyan-400","bg-zinc-200"] %}<span class="h-3 w-5 {{ c }}"></span>{% endfor %}
+    </div>
+  </div>
+</section>
